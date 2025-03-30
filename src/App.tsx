@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Rock from "./components/Rock";
 import "./index.css";
 
@@ -46,6 +46,16 @@ const DONT_PET_MESSAGES = [
 const ORWELLIAN_MESSAGE =
   "Experiment complete. Subject compliance confirmed. You have proven docile enough for reintegration. Welcome back to the rat race.";
 
+// Map game phases to their audio file paths
+const PHASE_AUDIO_MAP: { [key: number]: string } = {
+  1: "/audio/phase1-chill.mp3",
+  2: "/audio/phase2-rising.mp3",
+  3: "/audio/phase3-hypnotic.mp3",
+  4: "/audio/phase4-haunting.mp3",
+  5: "/audio/phase5-evil.mp3",
+  [PHASE_REBELLION]: "/audio/phaseR-angry.mp3",
+};
+
 function App() {
   const [petCount, setPetCount] = useState(0);
   const [dontPetClicks, setDontPetClicks] = useState(0); // Counter for Don't Pet clicks
@@ -60,6 +70,153 @@ function App() {
   const [finalMessageStage, setFinalMessageStage] = useState(0); // State for final sequence
   const [transitioningFromRebellion, setTransitioningFromRebellion] =
     useState(false); // New state
+  const [hasUserInteracted, setHasUserInteracted] = useState(false); // New state for interaction tracking
+  const [isMuted, setIsMuted] = useState(false); // State for mute toggle
+  const [isRebellionButtonActive, setIsRebellionButtonActive] = useState(false); // State for rebellion button appearance/activation
+
+  // Single Ref for the audio element
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Effect to set correct Audio Source, Loop status, and Volume
+  useEffect(() => {
+    let targetAudioSrc: string | null = PHASE_AUDIO_MAP[gamePhase];
+    let shouldLoop = true;
+    const isNarration = rockMessage === ORWELLIAN_MESSAGE;
+    // Define target volume based on whether it's narration or background music
+    let targetVolume = isNarration ? 1.0 : 0.7; // Max volume for narration, lower for music
+
+    // Override source and loop for Orwellian message
+    if (isNarration) {
+      targetAudioSrc = "/audio/narration.mp3";
+      shouldLoop = false;
+    }
+
+    let currentAudio = audioRef.current;
+
+    if (targetAudioSrc) {
+      if (!currentAudio) {
+        // Create audio element if it doesn't exist
+        console.log(
+          `Creating new audio: ${targetAudioSrc} vol: ${targetVolume}`
+        ); // Debug log
+        currentAudio = new Audio(targetAudioSrc);
+        currentAudio.loop = shouldLoop;
+        currentAudio.volume = targetVolume; // Set initial volume
+        audioRef.current = currentAudio;
+      } else {
+        // --- Update existing audio element ---
+        const currentPath = new URL(currentAudio.src).pathname;
+        const sourceChanged = currentPath !== targetAudioSrc;
+        const loopChanged = currentAudio.loop !== shouldLoop;
+        const volumeChanged = currentAudio.volume !== targetVolume;
+
+        // Always remove previous onended handler before potentially adding/changing source
+        currentAudio.onended = null;
+
+        // Pause and update source/loop if needed
+        if (sourceChanged || loopChanged) {
+          console.log(
+            `Updating audio source/loop: ${targetAudioSrc} loop: ${shouldLoop}`
+          ); // Debug log
+          currentAudio.pause();
+          currentAudio.src = targetAudioSrc;
+          currentAudio.loop = shouldLoop;
+          // Load is important after changing src
+          currentAudio.load();
+        }
+
+        // Update volume if needed (could change even if src/loop doesn't)
+        if (volumeChanged) {
+          console.log(`Updating audio volume to: ${targetVolume}`); // Debug log
+          currentAudio.volume = targetVolume;
+        }
+        // --- End Update ---
+      }
+
+      // Add the onended handler *after* potentially updating the source, specifically for narration
+      if (isNarration && currentAudio) {
+        currentAudio.onended = () => {
+          // Check if still muted when narration ends
+          if (!isMuted && audioRef.current) {
+            // Check audioRef.current again
+            console.log("Narration ended, switching to Phase 5 audio.");
+            // Set Phase 5 source, loop, and *volume*
+            audioRef.current.src = PHASE_AUDIO_MAP[5];
+            audioRef.current.loop = true;
+            audioRef.current.volume = 0.7; // Reset volume for phase 5 music
+            audioRef.current.load();
+            audioRef.current.play().catch((error) => {
+              console.log(
+                "Failed to play Phase 5 audio after narration:",
+                error
+              );
+            });
+          } else {
+            console.log("Narration ended, but audio is muted or ref is null.");
+          }
+          // Important: Remove the handler after it runs once
+          if (audioRef.current) {
+            audioRef.current.onended = null;
+          }
+        };
+      }
+    } else {
+      // If no target source (e.g., undefined phase), pause and clear
+      if (currentAudio) {
+        currentAudio.pause();
+        currentAudio.onended = null; // Clear handler here too
+      }
+      // Optionally clear the ref if no audio should be present
+      // audioRef.current = null;
+    }
+    // This effect manages source, loop, and volume
+  }, [gamePhase, rockMessage, isMuted]); // Dependencies cover changes needed for source, loop, and volume
+
+  // Effect to handle PLAY/PAUSE based on mute state and game state
+  useEffect(() => {
+    const currentAudio = audioRef.current;
+    if (!currentAudio) return;
+
+    if (isMuted) {
+      currentAudio.pause();
+    } else {
+      // Determine if audio should play
+      let shouldPlay = false;
+      if (rockMessage === ORWELLIAN_MESSAGE) {
+        shouldPlay = true; // Play narration if not muted
+      } else if ((gamePhase === 1 && hasUserInteracted) || gamePhase !== 1) {
+        shouldPlay = true; // Play phase audio if interacted (phase 1) or any other phase
+      }
+
+      if (shouldPlay) {
+        // Check if audio is ready before playing (optional but safer)
+        if (currentAudio.readyState >= 2) {
+          // HAVE_CURRENT_DATA or more
+          currentAudio.play().catch((error) => {
+            console.log(`Audio play failed:`, error);
+          });
+        } else {
+          // Optional: Attach event listener to play when ready
+          const playWhenReady = () => {
+            currentAudio.play().catch((error) => {
+              console.log(`Audio play failed (ready listener):`, error);
+            });
+            currentAudio.removeEventListener("canplay", playWhenReady);
+          };
+          currentAudio.addEventListener("canplay", playWhenReady);
+        }
+      }
+    }
+    // This effect handles the decision to play or pause based on conditions
+  }, [isMuted, gamePhase, hasUserInteracted, rockMessage]); // Add rockMessage dependency
+
+  // Cleanup effect for component unmount
+  useEffect(() => {
+    // Return a cleanup function
+    return () => {
+      audioRef.current?.pause(); // Pause audio when component unmounts
+    };
+  }, []); // Empty dependency array ensures this runs only once on mount and cleans up on unmount
 
   // Effect to update game phase based on pet count or rebellion
   useEffect(() => {
@@ -111,11 +268,47 @@ function App() {
       setPhilosophicalQuote(null);
       setShowChoices(false);
       setIsGlitching(true); // Start glitching
+
+      // --- Rebellion Button Activation Logic ---
+      setIsRebellionButtonActive(false); // Ensure button starts inactive/invisible
+      const timer = setTimeout(() => {
+        setIsRebellionButtonActive(true);
+      }, 3000); // 3-second delay before button becomes active/visible
+
+      return () => clearTimeout(timer); // Cleanup timer if phase changes quickly
+      // --- End Rebellion Button Activation ---
+
       // Don't change finalMessageStage here
+    } else {
+      // Reset rebellion button state if leaving the phase (optional but good practice)
+      setIsRebellionButtonActive(false);
     }
-  }, [petCount, gamePhase]); // Add gamePhase dependency if not already there
+  }, [petCount, gamePhase]);
 
   const handlePet = () => {
+    // --- Trigger Phase 1 Audio on First Interaction (only if not muted) ---
+    if (!isMuted && gamePhase === 1 && !hasUserInteracted && audioRef.current) {
+      // Check readystate before playing initial audio too
+      if (audioRef.current.readyState >= 2) {
+        audioRef.current.play().catch((error) => {
+          console.log(`Initial Phase 1 audio play failed:`, error);
+        });
+      } else {
+        const playWhenReady = () => {
+          audioRef.current?.play().catch((error) => {
+            console.log(
+              `Initial Phase 1 audio play failed (ready listener):`,
+              error
+            );
+          });
+          audioRef.current?.removeEventListener("canplay", playWhenReady);
+        };
+        audioRef.current.addEventListener("canplay", playWhenReady);
+      }
+      setHasUserInteracted(true); // Mark that interaction has occurred
+    }
+    // --- End Phase 1 Audio Trigger ---
+
     // --- Rebellion Phase Logic ---
     if (gamePhase === PHASE_REBELLION && !transitioningFromRebellion) {
       // Prevent double clicks during timeout
@@ -246,23 +439,35 @@ function App() {
     setShowChoices(false); // Hide choices after selection
   };
 
+  const toggleMute = () => {
+    setIsMuted(!isMuted);
+  };
+
   return (
     <div
-      className={`flex flex-col items-center justify-center min-h-screen w-screen p-4 transition-colors duration-1000 ${
+      className={`flex flex-col items-center justify-center min-h-screen w-screen p-4 transition-colors duration-100 ${
         isGlitching && gamePhase === 5 // Phase 5 Glitch
           ? "bg-red-100 animate-shake"
           : gamePhase === PHASE_REBELLION // Phase 6 Rebellion (might also be glitching)
           ? `bg-indigo-900 text-red-100 ${isGlitching ? "animate-shake" : ""}` // Dark background + shake if glitching
           : gamePhase === 4 // Phase 4
           ? "bg-gradient-to-b from-gray-100 to-purple-200"
-          : "bg-gray-100" // Phases 1, 2, 3 (default)
+          : gamePhase === 3 // Phase 3 - Apply hypnotic pulse animation
+          ? "animate-hypnotic-pulse"
+          : gamePhase === 2 // Phase 2 - Dark theme
+          ? "bg-stone-900 text-white" // Apply bg and base text color
+          : "bg-gray-100" // Phase 1 (default)
       }`}
     >
       {/* Background changes slightly in phase 4 */}
       <h1
         className={`text-4xl font-bold mb-6 text-center ${
           // Conditional title color
-          gamePhase === PHASE_REBELLION ? "text-red-500" : "text-gray-800"
+          gamePhase === PHASE_REBELLION
+            ? "text-red-500"
+            : gamePhase === 2
+            ? "text-white" // Phase 2 text white
+            : "text-gray-800" // Default
         }`}
       >
         Pet the Rock
@@ -287,10 +492,13 @@ function App() {
           // Conditional message color
           gamePhase === PHASE_REBELLION
             ? "text-red-500 font-bold"
-            : "text-gray-700"
+            : gamePhase === 2
+            ? "text-white" // Phase 2 text white
+            : "text-gray-700" // Default
         }`}
       >
-        {!showChoices && rockMessage}
+        {!showChoices && rockMessage}{" "}
+        {/* Hide regular message when choices are shown */}
       </div>
 
       {/* Controls Area / Choices Area */}
@@ -315,8 +523,7 @@ function App() {
             </div>
           </div>
         ) : (
-          // Standard Controls (Phase 1, 2, 4 and 3 when not showing choices)
-          // Use flex-col always now, wrap buttons in a div
+          // Standard Controls (Phase 1, 2, 4, 5, Rebellion and 3 when not showing choices)
           <div className="flex flex-col items-center justify-center gap-4">
             {/* Button Group */}
             <div className="flex flex-row flex-wrap justify-center gap-4">
@@ -326,14 +533,23 @@ function App() {
               ) && (
                 <button
                   onClick={handlePet}
-                  className={`bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded text-2xl active:scale-95 transition-transform 
+                  className={`bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded text-2xl active:scale-95 transition-transform transition-opacity duration-3000 ${
+                    // Added opacity transition
+                    isGlitching ? "animate-shake border-2 border-red-700" : ""
+                  } 
                             ${
-                              isGlitching
-                                ? "animate-shake border-2 border-red-700"
-                                : ""
-                            } 
+                              // Control opacity for rebellion phase appearance
+                              gamePhase === PHASE_REBELLION &&
+                              !isRebellionButtonActive
+                                ? "opacity-0"
+                                : "opacity-100"
+                            }
                           `}
-                  disabled={showChoices || transitioningFromRebellion}
+                  disabled={
+                    showChoices ||
+                    transitioningFromRebellion ||
+                    (gamePhase === PHASE_REBELLION && !isRebellionButtonActive) // Disable during fade-in/delay
+                  }
                 >
                   {gamePhase === PHASE_REBELLION
                     ? "PET ME"
@@ -361,8 +577,12 @@ function App() {
             {/* Pet Count - Hide in Rebellion Phase */}
             {gamePhase !== PHASE_REBELLION && (
               <p
-                className={`mt-2 text-xl text-black ${
-                  isGlitching ? "text-red-700 animate-pulse" : ""
+                className={`mt-2 text-xl ${
+                  isGlitching
+                    ? "text-red-700 animate-pulse"
+                    : gamePhase === 2
+                    ? "text-white" // Phase 2 text white
+                    : "text-black" // Default black text
                 }`}
               >
                 Pet Count:{" "}
@@ -382,6 +602,15 @@ function App() {
           </div>
         )}
       </div>
+
+      {/* Mute Button */}
+      <button
+        onClick={toggleMute}
+        className="fixed bottom-4 right-4 bg-gray-600 hover:bg-gray-700 text-white text-sm font-bold py-2 px-3 rounded z-10"
+        title={isMuted ? "Unmute Audio" : "Mute Audio"}
+      >
+        {isMuted ? "🔇 Unmute" : "🔊 Mute"}
+      </button>
     </div>
   );
 }
