@@ -443,6 +443,28 @@ function App() {
     setIsMuted(!isMuted);
   };
 
+  // --- Add handleReset Function ---
+  const handleReset = () => {
+    setPetCount(0);
+    setDontPetClicks(0);
+    setGamePhase(1);
+    setRockMessage(null);
+    setShowChoices(false);
+    setChoiceOptions([]);
+    setPhilosophicalQuote(null);
+    setIsGlitching(false);
+    setFinalMessageStage(0);
+    setTransitioningFromRebellion(false);
+    setHasUserInteracted(false);
+    setIsRebellionButtonActive(false);
+
+    // Pause any existing audio
+    audioRef.current?.pause();
+    // We don't need to reset the src here, the useEffect hook will handle it
+    // when gamePhase changes back to 1. It will also handle play()
+    // on first interaction.
+  };
+
   return (
     <div
       className={`flex flex-col items-center justify-center min-h-screen w-screen p-4 transition-colors duration-100 ${
@@ -530,13 +552,13 @@ function App() {
               {/* Conditionally render Pet button - hide after final message */}
               {!(
                 gamePhase === 5 && finalMessageStage > FINAL_MESSAGES.length
-              ) && (
+              ) ? (
                 <button
                   onClick={handlePet}
                   className={`bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded text-2xl active:scale-95 transition-transform transition-opacity duration-3000 ${
                     // Added opacity transition
                     isGlitching ? "animate-shake border-2 border-red-700" : ""
-                  } 
+                  }
                             ${
                               // Control opacity for rebellion phase appearance
                               gamePhase === PHASE_REBELLION &&
@@ -557,6 +579,14 @@ function App() {
                     ? "???"
                     : "Pet 🖐️"}
                 </button>
+              ) : (
+                // Show Try Again button after final message
+                <button
+                  onClick={handleReset}
+                  className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-6 rounded text-2xl active:scale-95 transition-transform"
+                >
+                  Try Again? 🔁
+                </button>
               )}
 
               {/* Hide Don't Pet in Phase 4, 5 & Rebellion */}
@@ -575,30 +605,34 @@ function App() {
             </div>
 
             {/* Pet Count - Hide in Rebellion Phase */}
-            {gamePhase !== PHASE_REBELLION && (
-              <p
-                className={`mt-2 text-xl ${
-                  isGlitching
-                    ? "text-red-700 animate-pulse"
-                    : gamePhase === 2
-                    ? "text-white" // Phase 2 text white
-                    : "text-black" // Default black text
-                }`}
-              >
-                Pet Count:{" "}
-                <span
-                  className={`font-semibold ${
-                    isGlitching ? "glitch-text" : ""
+            {gamePhase !== PHASE_REBELLION &&
+              // Also hide count after final message
+              !(
+                gamePhase === 5 && finalMessageStage > FINAL_MESSAGES.length
+              ) && (
+                <p
+                  className={`mt-2 text-xl ${
+                    isGlitching
+                      ? "text-red-700 animate-pulse"
+                      : gamePhase === 2
+                      ? "text-white" // Phase 2 text white
+                      : "text-black" // Default black text
                   }`}
                 >
-                  {gamePhase >= 5
-                    ? "[GLITCHED]"
-                    : gamePhase >= 4
-                    ? "∞"
-                    : petCount}{" "}
-                </span>
-              </p>
-            )}
+                  Pet Count:{" "}
+                  <span
+                    className={`font-semibold ${
+                      isGlitching ? "glitch-text" : ""
+                    }`}
+                  >
+                    {gamePhase >= 5
+                      ? "[GLITCHED]"
+                      : gamePhase >= 4
+                      ? "∞"
+                      : petCount}{" "}
+                  </span>
+                </p>
+              )}
           </div>
         )}
       </div>
