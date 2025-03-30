@@ -259,7 +259,12 @@ function App() {
       }`}
     >
       {/* Background changes slightly in phase 4 */}
-      <h1 className="text-4xl font-bold mb-6 text-center text-gray-800">
+      <h1
+        className={`text-4xl font-bold mb-6 text-center ${
+          // Conditional title color
+          gamePhase === PHASE_REBELLION ? "text-red-500" : "text-gray-800"
+        }`}
+      >
         Pet the Rock
       </h1>
 
@@ -277,9 +282,15 @@ function App() {
       />
 
       {/* Dialogue/Message Area */}
-      <div className="mt-6 h-16 text-center text-gray-700 text-lg italic flex items-center justify-center">
-        {!showChoices && rockMessage}{" "}
-        {/* Hide regular message when choices are shown */}
+      <div
+        className={`mt-6 h-16 text-center text-lg italic flex items-center justify-center ${
+          // Conditional message color
+          gamePhase === PHASE_REBELLION
+            ? "text-red-500 font-bold"
+            : "text-gray-700"
+        }`}
+      >
+        {!showChoices && rockMessage}
       </div>
 
       {/* Controls Area / Choices Area */}
