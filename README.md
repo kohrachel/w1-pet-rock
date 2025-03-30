@@ -1,6 +1,10 @@
 # Pet Rock Project
 
-A fun interactive pet rock built with React, TypeScript, and Vite.
+Every week, @zineanteoh and I give ourselves an hour to create a goofy project solely with AI. No human coding, any idea you can think of.
+
+This is my project for week 1. It's a rock.
+
+Inspired by [Neal.fun](https://neal.fun/), built with React, TypeScript, and Vite.
 
 ## Getting Started
 
