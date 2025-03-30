@@ -6,7 +6,13 @@ This is my project for week 1. It's a rock. Very innocent, no hidden message beh
 
 Inspired by [Neal.fun](https://neal.fun/), built with React, TypeScript, and Vite. 
 
-Total time taken: 1.5 hours
+Total time taken: 1.5 hours + 2 hours debugging 
+
+Techstack/technologies used:
+- TailwindCSS
+- Cursor Pro 
+- Audio: [Pixabay](https://pixabay.com/)
+- TTS: [TTS Tool](https://ttstool.com/)
 
 # Demo!
 
