@@ -6,6 +6,7 @@ interface RockProps {
   isGlitching: boolean; // Add isGlitching prop
 }
 
+const SHOW_MOSS = 5;
 const GLITCH_FACES = ["🪨", "👁️", "🌀", "✨", "❓", "❗", "💀"];
 
 const Rock: React.FC<RockProps> = ({ petCount, gamePhase, isGlitching }) => {
@@ -18,13 +19,13 @@ const Rock: React.FC<RockProps> = ({ petCount, gamePhase, isGlitching }) => {
   let showMossBorder = false; // Flag to show border at all
   let animateMoss = false; // Flag to animate color
 
-  if (petCount >= 25) {
+  if (petCount >= 3 * SHOW_MOSS) {
     mossWidthClass = "border-8";
     showMossBorder = true;
     if (gamePhase === 4 && !isGlitching) {
       animateMoss = true;
     }
-  } else if (petCount >= 10) {
+  } else if (petCount >= SHOW_MOSS) {
     mossWidthClass = "border-4";
     showMossBorder = true;
     if (gamePhase === 4 && !isGlitching) {
@@ -65,8 +66,12 @@ const Rock: React.FC<RockProps> = ({ petCount, gamePhase, isGlitching }) => {
 
   // Determine rock face based on phase and state
   let rockFace = "🪨";
-  if (isGlitching) {
+  if (isGlitching && gamePhase === 5) {
+    // Specific glitching for phase 5
     rockFace = GLITCH_FACES[glitchFaceIndex];
+  } else if (gamePhase === 6) {
+    // Rebellion phase (use number 6)
+    rockFace = "😈";
   } else if (gamePhase >= 4) {
     rockFace = "✨";
   } else if (gamePhase >= 3) {
@@ -100,7 +105,13 @@ const Rock: React.FC<RockProps> = ({ petCount, gamePhase, isGlitching }) => {
               ? "border-green-700"
               : ""
           } 
-          ${isGlitching ? "bg-red-500 opacity-75 border-none" : ""} 
+          ${
+            isGlitching && gamePhase === 5 // Apply glitch style only for phase 5 glitch
+              ? "bg-red-500 opacity-75 border-none"
+              : gamePhase === 6 && isGlitching // Apply rebellion glitch style (uses isGlitching from App.tsx)
+              ? "bg-purple-900 border-red-500 border-dashed" // Example rebellion style
+              : ""
+          }
         `}
       >
         <span // Outer span for spinning

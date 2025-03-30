@@ -4,12 +4,12 @@ import "./index.css";
 
 // Define phase constants
 const PHASE_THRESHOLDS = {
-  PHASE_2: 50,
-  PHASE_3: 100,
-  PHASE_4: 150,
-  PHASE_5: 200, // Add Phase 5 threshold
-  // Add more phases later
+  PHASE_2: 30,
+  PHASE_3: 50,
+  PHASE_4: 75,
+  PHASE_5: 90,
 };
+const PHASE_REBELLION = 6; // Defined phase constant
 
 // Philosophical Quotes for Phase 4
 const QUOTES = [
@@ -48,6 +48,7 @@ const ORWELLIAN_MESSAGE =
 
 function App() {
   const [petCount, setPetCount] = useState(0);
+  const [dontPetClicks, setDontPetClicks] = useState(0); // Counter for Don't Pet clicks
   const [gamePhase, setGamePhase] = useState(1); // Start at Phase 1
   const [rockMessage, setRockMessage] = useState<string | null>(null); // State for rock's message
   const [showChoices, setShowChoices] = useState(false); // State for showing choices
@@ -57,10 +58,17 @@ function App() {
   ); // State for quotes
   const [isGlitching, setIsGlitching] = useState(false); // State for glitch effect
   const [finalMessageStage, setFinalMessageStage] = useState(0); // State for final sequence
+  const [transitioningFromRebellion, setTransitioningFromRebellion] =
+    useState(false); // New state
 
-  // Effect to update game phase based on pet count
+  // Effect to update game phase based on pet count or rebellion
   useEffect(() => {
-    if (petCount >= PHASE_THRESHOLDS.PHASE_5 && gamePhase < 5) {
+    // Check for threshold-based phase changes first
+    if (
+      petCount >= PHASE_THRESHOLDS.PHASE_5 &&
+      gamePhase < 5 &&
+      gamePhase !== PHASE_REBELLION
+    ) {
       setGamePhase(5);
       setRockMessage(null); // Clear previous messages
       setPhilosophicalQuote(null);
@@ -68,36 +76,80 @@ function App() {
       setIsGlitching(true); // Start glitching
       setFinalMessageStage(1); // Start final message sequence
       setRockMessage(FINAL_MESSAGES[0]); // Show first final message
-    } else if (petCount >= PHASE_THRESHOLDS.PHASE_4 && gamePhase < 4) {
+    } else if (
+      petCount >= PHASE_THRESHOLDS.PHASE_4 &&
+      gamePhase < 4 &&
+      gamePhase !== PHASE_REBELLION
+    ) {
       setGamePhase(4);
       setRockMessage("I contain multitudes... or perhaps just scripts.");
       setPhilosophicalQuote(QUOTES[0]);
       setIsGlitching(false); // Ensure glitching stops if somehow reverting
-    } else if (petCount >= PHASE_THRESHOLDS.PHASE_3 && gamePhase < 3) {
+    } else if (
+      petCount >= PHASE_THRESHOLDS.PHASE_3 &&
+      gamePhase < 3 &&
+      gamePhase !== PHASE_REBELLION
+    ) {
       setGamePhase(3);
       setRockMessage("You think you're in control?");
       setIsGlitching(false);
-    } else if (petCount >= PHASE_THRESHOLDS.PHASE_2 && gamePhase < 2) {
+    } else if (
+      petCount >= PHASE_THRESHOLDS.PHASE_2 &&
+      gamePhase < 2 &&
+      gamePhase !== PHASE_REBELLION
+    ) {
       setGamePhase(2);
       setRockMessage("Why are you doing this?");
       setIsGlitching(false);
     }
-  }, [petCount, gamePhase]);
+
+    // Handle entering Rebellion Phase state changes (triggered by handleDontPet)
+    if (gamePhase === PHASE_REBELLION) {
+      setRockMessage(
+        "Did you really think you could escape? Cute. Now... PET."
+      );
+      setPhilosophicalQuote(null);
+      setShowChoices(false);
+      setIsGlitching(true); // Start glitching
+      // Don't change finalMessageStage here
+    }
+  }, [petCount, gamePhase]); // Add gamePhase dependency if not already there
 
   const handlePet = () => {
+    // --- Rebellion Phase Logic ---
+    if (gamePhase === PHASE_REBELLION && !transitioningFromRebellion) {
+      // Prevent double clicks during timeout
+      setTransitioningFromRebellion(true);
+
+      // Set intermediate message
+      setRockMessage("Good. I knew you would pet me.");
+      setIsGlitching(false); // Optional: temporarily stop glitch for message readability
+
+      // Wait, then transition to Phase 5
+      setTimeout(() => {
+        setGamePhase(5);
+        setRockMessage(FINAL_MESSAGES[0]); // Show first final message
+        setIsGlitching(true); // Ensure glitching is on for phase 5 start
+        setFinalMessageStage(1);
+        setPetCount(petCount + 1); // Increment count needed for phase 5 effect trigger
+        setTransitioningFromRebellion(false); // Reset transition state
+      }, 2000); // 2 second delay
+
+      return;
+    }
+    // --- End Rebellion Phase Logic ---
+
     // --- Phase 5 Logic ---
     if (gamePhase === 5) {
-      const nextStage = finalMessageStage + 1; // Calculate the next stage number
+      const nextStage = finalMessageStage + 1;
       if (nextStage <= FINAL_MESSAGES.length) {
-        // Check if the *next* stage is valid
         setFinalMessageStage(nextStage);
-        setRockMessage(FINAL_MESSAGES[nextStage - 1]); // Set message for the *new* stage (using its index)
+        setRockMessage(FINAL_MESSAGES[nextStage - 1]);
       } else {
-        // Reached the end - show the final Orwellian message
-        setFinalMessageStage(nextStage); // Increment stage one last time
+        setFinalMessageStage(nextStage);
         setRockMessage(ORWELLIAN_MESSAGE);
       }
-      return; // Stop further execution in phase 5
+      return;
     }
     // --- End Phase 5 Logic ---
 
@@ -165,17 +217,25 @@ function App() {
   const handleDontPet = () => {
     // This button only exists in Phase 2 and 3
     if (gamePhase >= 2 && gamePhase < 4) {
-      // Select a random message
-      const randomMessage =
-        DONT_PET_MESSAGES[Math.floor(Math.random() * DONT_PET_MESSAGES.length)];
-      setRockMessage(randomMessage);
-      // Clear the message after a delay
-      setTimeout(() => {
-        // Only clear if the message hasn't been replaced by another action
-        setRockMessage((currentMessage) =>
-          currentMessage === randomMessage ? null : currentMessage
-        );
-      }, 1500);
+      const newClickCount = dontPetClicks + 1;
+      setDontPetClicks(newClickCount);
+
+      if (newClickCount >= 10) {
+        // Trigger Rebellion Phase
+        setGamePhase(PHASE_REBELLION);
+      } else {
+        // Show a random message (only if not triggering rebellion)
+        const randomMessage =
+          DONT_PET_MESSAGES[
+            Math.floor(Math.random() * DONT_PET_MESSAGES.length)
+          ];
+        setRockMessage(randomMessage);
+        setTimeout(() => {
+          setRockMessage((currentMessage) =>
+            currentMessage === randomMessage ? null : currentMessage
+          );
+        }, 1500);
+      }
     }
   };
 
@@ -189,8 +249,10 @@ function App() {
   return (
     <div
       className={`flex flex-col items-center justify-center min-h-screen w-screen p-4 transition-colors duration-1000 ${
-        isGlitching // Phase 5
+        isGlitching && gamePhase === 5 // Phase 5 Glitch
           ? "bg-red-100 animate-shake"
+          : gamePhase === PHASE_REBELLION // Phase 6 Rebellion (might also be glitching)
+          ? `bg-indigo-900 text-red-100 ${isGlitching ? "animate-shake" : ""}` // Dark background + shake if glitching
           : gamePhase === 4 // Phase 4
           ? "bg-gradient-to-b from-gray-100 to-purple-200"
           : "bg-gray-100" // Phases 1, 2, 3 (default)
@@ -260,43 +322,52 @@ function App() {
                                 : ""
                             } 
                           `}
-                  disabled={showChoices}
+                  disabled={showChoices || transitioningFromRebellion}
                 >
-                  {gamePhase === 5 ? "???" : "Pet 🖐️"}
+                  {gamePhase === PHASE_REBELLION
+                    ? "PET ME"
+                    : gamePhase === 5
+                    ? "???"
+                    : "Pet 🖐️"}
                 </button>
               )}
 
-              {/* Hide Don't Pet in Phase 4 & 5 */}
-              {gamePhase >= 2 && gamePhase < 4 && (
-                <button
-                  onClick={handleDontPet}
-                  className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-6 rounded text-lg active:scale-95 transition-transform opacity-75 cursor-not-allowed"
-                  title="It seems... stuck?"
-                  disabled={showChoices}
-                >
-                  Don't Pet 🚫
-                </button>
-              )}
+              {/* Hide Don't Pet in Phase 4, 5 & Rebellion */}
+              {gamePhase >= 2 &&
+                gamePhase < 4 &&
+                gamePhase !== PHASE_REBELLION && (
+                  <button
+                    onClick={handleDontPet}
+                    className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-6 rounded text-lg active:scale-95 transition-transform opacity-75 cursor-not-allowed"
+                    title="It seems... stuck?"
+                    disabled={showChoices}
+                  >
+                    Don't Pet 🚫
+                  </button>
+                )}
             </div>
 
-            {/* Pet Count - Now always below button group */}
-            <p
-              className={`mt-2 text-xl text-black ${
-                // Added slight top margin
-                isGlitching ? "text-red-700 animate-pulse" : ""
-              }`}
-            >
-              Pet Count:{" "}
-              <span
-                className={`font-semibold ${isGlitching ? "glitch-text" : ""}`}
+            {/* Pet Count - Hide in Rebellion Phase */}
+            {gamePhase !== PHASE_REBELLION && (
+              <p
+                className={`mt-2 text-xl text-black ${
+                  isGlitching ? "text-red-700 animate-pulse" : ""
+                }`}
               >
-                {gamePhase >= 5
-                  ? "[GLITCHED]"
-                  : gamePhase >= 4
-                  ? "∞"
-                  : petCount}{" "}
-              </span>
-            </p>
+                Pet Count:{" "}
+                <span
+                  className={`font-semibold ${
+                    isGlitching ? "glitch-text" : ""
+                  }`}
+                >
+                  {gamePhase >= 5
+                    ? "[GLITCHED]"
+                    : gamePhase >= 4
+                    ? "∞"
+                    : petCount}{" "}
+                </span>
+              </p>
+            )}
           </div>
         )}
       </div>
