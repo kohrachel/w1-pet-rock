@@ -6,6 +6,24 @@ This is my project for week 1. It's a rock.
 
 Inspired by [Neal.fun](https://neal.fun/), built with React, TypeScript, and Vite.
 
+# Demo!
+
+## Pet the rock...
+
+<img width="1624" alt="image" src="https://github.com/user-attachments/assets/061cdede-ac38-443a-8b72-428df362d4df" />
+
+## Make it happy!
+
+<img width="1624" alt="image" src="https://github.com/user-attachments/assets/28e66d04-025c-4cae-aa36-883726227f0b" />
+
+## Wait... what's that green thing? 
+
+<img width="1624" alt="image" src="https://github.com/user-attachments/assets/e71591f3-b692-40ac-ada4-787f06bebcb9" />
+
+## It's growing?? What's happening???
+
+<img width="1624" alt="image" src="https://github.com/user-attachments/assets/9d1bdc45-6b31-48dd-96f8-e973711769e8" />
+
 ## Getting Started
 
 These instructions will get you a copy of the project up and running on your local machine for development and testing purposes.
