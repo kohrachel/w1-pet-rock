@@ -1,10 +1,12 @@
-# Pet Rock Project
+# Pet the Rock
 
 Every week, [@zineanteoh](https://github.com/zineanteoh) and I give ourselves an hour to create a goofy project solely with AI. No human coding, any idea you can think of.
 
-This is my project for week 1. It's a rock.
+This is my project for week 1. It's a rock. Very innocent, no hidden message behind it. Just a rock that you should pet. 
 
-Inspired by [Neal.fun](https://neal.fun/), built with React, TypeScript, and Vite.
+Inspired by [Neal.fun](https://neal.fun/), built with React, TypeScript, and Vite. 
+
+Total time taken: 1.5 hours
 
 # Demo!
 
