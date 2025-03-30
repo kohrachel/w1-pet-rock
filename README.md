@@ -1,6 +1,6 @@
 # Pet Rock Project
 
-Every week, @zineanteoh and I give ourselves an hour to create a goofy project solely with AI. No human coding, any idea you can think of.
+Every week, [@zineanteoh](https://github.com/zineanteoh) and I give ourselves an hour to create a goofy project solely with AI. No human coding, any idea you can think of.
 
 This is my project for week 1. It's a rock.
 
